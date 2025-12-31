@@ -1,0 +1,126 @@
+{
+  "name": "inventory-management-system",
+  "version": "1.0.0",
+  "description": "Sistema de Gestión de Inventarios Offline-First con sincronización en la nube",
+  "main": "dist/electron/main.js",
+  "author": {
+    "name": "BreynerCiro",
+    "email": "breynerismael@gmail.com"
+  },
+  "homepage": "https://github.com/breynerciro/SGI",
+  "license": "PROPRIETARY",
+  "private": true,
+  "scripts": {
+    "license:gen": "node scripts/activate-locally.js",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:electron\"",
+    "dev:frontend": "vite frontend",
+    "dev:electron": "NODE_ENV=development tsc -p electron/tsconfig.json && electron .",
+    "build": "npm run build:frontend && npm run build:backend && npm run build:electron && npm run build:prisma",
+    "build:frontend": "vite build frontend",
+    "build:backend": "tsc -p backend/tsconfig.json",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build:prisma": "mkdir -p dist/prisma && cp -r prisma/generated-client dist/prisma/",
+    "package": "npm run build && electron-builder",
+    "package:win": "npm run build && electron-builder --win",
+    "package:linux": "npm run build && electron-builder --linux",
+    "package:mac": "npm run build && electron-builder --mac",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:studio": "prisma studio",
+    "postinstall": "electron-builder install-app-deps && npm run prisma:generate"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.7.1",
+    "aes-js": "^3.1.2",
+    "axios": "^1.6.2",
+    "date-fns": "^3.0.0",
+    "dotenv": "^17.2.3",
+    "googleapis": "^128.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "megajs": "^1.1.1",
+    "node-machine-id": "^1.1.12",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.20.0",
+    "uuid": "^9.0.1",
+    "zod": "^3.22.4",
+    "zustand": "^4.4.7"
+  },
+  "devDependencies": {
+    "@types/aes-js": "^3.1.4",
+    "@types/jest": "^29.5.11",
+    "@types/jsonwebtoken": "^9.0.5",
+    "@types/node": "^20.10.5",
+    "@types/react": "^18.2.45",
+    "@types/react-dom": "^18.2.18",
+    "@types/uuid": "^9.0.7",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0",
+    "@vitejs/plugin-react": "^4.2.1",
+    "concurrently": "^8.2.2",
+    "electron": "^39.2.7",
+    "electron-builder": "^24.9.1",
+    "eslint": "^8.56.0",
+    "jest": "^29.7.0",
+    "pkg": "^5.8.1",
+    "prisma": "^5.7.1",
+    "sharp": "^0.34.5",
+    "ts-jest": "^29.1.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.3.3",
+    "vite": "^7.3.0"
+  },
+  "build": {
+    "appId": "com.inventorysystem.app",
+    "productName": "Sistema de Inventarios",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json",
+      "dist/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "prisma/inventory.db",
+        "to": "inventory.db"
+      },
+      {
+        "from": "prisma/migrations",
+        "to": "migrations"
+      }
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "assets/icon.png",
+      "category": "Office"
+    },
+    "mac": {
+      "target": [
+        "dmg"
+      ],
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.business"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    }
+  }
+}

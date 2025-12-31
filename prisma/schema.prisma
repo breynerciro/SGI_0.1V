@@ -1,0 +1,205 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated-client"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./inventory.db"
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  passwordHash  String
+  name          String
+  role          String    // UserRole
+  status        String    @default("ACTIVE") // UserStatus
+  createdAt     DateTime  @default(now())
+  lastLogin     DateTime?
+  
+  movements     InventoryMovement[]
+  auditLogs     AuditLog[]
+  
+  @@map("users")
+}
+
+model Company {
+  id              String   @id @default(uuid())
+  commercialName  String
+  legalName       String
+  taxId           String   @unique
+  logoPath        String?
+  primaryColor    String   @default("#3B82F6")
+  secondaryColor  String   @default("#10B981")
+  contactEmail    String?
+  contactPhone    String?
+  address         String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  warehouses      Warehouse[]
+  brandingConfig  BrandingConfig?
+  
+  @@map("companies")
+}
+
+model BrandingConfig {
+  id            String   @id @default(uuid())
+  companyId     String   @unique
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  systemName    String   @default("Sistema de Inventarios")
+  tagline       String?
+  logoUrl       String?
+  faviconUrl    String?
+  primaryColor  String   @default("#3B82F6")
+  secondaryColor String  @default("#10B981")
+  customCss     String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("branding_configs")
+}
+
+model Category {
+  id          String     @id @default(uuid())
+  name        String
+  description String?
+  parentId    String?
+  parent      Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children    Category[] @relation("CategoryHierarchy")
+  products    Product[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  
+  @@map("categories")
+}
+
+model Product {
+  id          String    @id @default(uuid())
+  code        String    @unique
+  name        String
+  description String?
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  unit        String    // e.g., "unidad", "kg", "litro"
+  cost        Float     @default(0)
+  price       Float     @default(0)
+  minStock    Int       @default(0)
+  maxStock    Int?
+  barcode     String?
+  status      String    @default("ACTIVE") // ProductStatus
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  
+  stock       Stock[]
+  movementItems MovementItem[]
+  
+  @@map("products")
+}
+
+model Warehouse {
+  id          String   @id @default(uuid())
+  name        String
+  location    String?
+  description String?
+  companyId   String
+  company     Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  stock       Stock[]
+  movementsFrom InventoryMovement[] @relation("MovementFrom")
+  movementsTo   InventoryMovement[] @relation("MovementTo")
+  
+  @@map("warehouses")
+}
+
+model Stock {
+  id          String    @id @default(uuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouseId String
+  warehouse   Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+  quantity    Int       @default(0)
+  lastUpdated DateTime  @updatedAt
+  
+  @@unique([productId, warehouseId])
+  @@map("stock")
+}
+
+model InventoryMovement {
+  id              String         @id @default(uuid())
+  type            String         // MovementType
+  date            DateTime       @default(now())
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  warehouseFromId String?
+  warehouseFrom   Warehouse?     @relation("MovementFrom", fields: [warehouseFromId], references: [id])
+  warehouseToId   String?
+  warehouseTo     Warehouse?     @relation("MovementTo", fields: [warehouseToId], references: [id])
+  notes           String?
+  reference       String?        // External reference number
+  createdAt       DateTime       @default(now())
+  
+  items           MovementItem[]
+  
+  @@map("inventory_movements")
+}
+
+model MovementItem {
+  id          String            @id @default(uuid())
+  movementId  String
+  movement    InventoryMovement @relation(fields: [movementId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product           @relation(fields: [productId], references: [id])
+  quantity    Int
+  cost        Float             @default(0)
+  price       Float             @default(0)
+  notes       String?
+  
+  @@map("movement_items")
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action      String   // e.g., "LOGIN", "CREATE_PRODUCT", "MOVEMENT_IN"
+  entityType  String?  // e.g., "Product", "Movement"
+  entityId    String?
+  details     String?  // JSON string with additional details
+  ipAddress   String?
+  timestamp   DateTime @default(now())
+  
+  @@map("audit_logs")
+}
+
+model SyncQueue {
+  id          String    @id @default(uuid())
+  entityType  String    // e.g., "Product", "Movement"
+  entityId    String
+  operation   String    // "CREATE", "UPDATE", "DELETE"
+  data        String?   // JSON snapshot of the entity
+  createdAt   DateTime  @default(now())
+  syncedAt    DateTime?
+  
+  @@index([syncedAt])
+  @@map("sync_queue")
+}
+
+model SyncLog {
+  id          String    @id @default(uuid())
+  provider    String    // "GOOGLE_DRIVE", "MEGA", "WEBDAV"
+  status      String    // SyncStatus
+  startedAt   DateTime  @default(now())
+  completedAt DateTime?
+  itemsCount  Int       @default(0)
+  errorMessage String?
+  backupPath  String?
+  
+  @@map("sync_logs")
+}
