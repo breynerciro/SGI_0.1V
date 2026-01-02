@@ -11,15 +11,14 @@
   "license": "PROPRIETARY",
   "private": true,
   "scripts": {
-    "license:gen": "node scripts/activate-locally.js",
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:electron\"",
     "dev:frontend": "vite frontend",
-    "dev:electron": "NODE_ENV=development tsc -p electron/tsconfig.json && electron .",
+    "dev:electron": "cross-env NODE_ENV=development tsc -p electron/tsconfig.json && electron .",
     "build": "npm run build:frontend && npm run build:backend && npm run build:electron && npm run build:prisma",
     "build:frontend": "vite build frontend",
     "build:backend": "tsc -p backend/tsconfig.json",
     "build:electron": "tsc -p electron/tsconfig.json",
-    "build:prisma": "mkdir -p dist/prisma && cp -r prisma/generated-client dist/prisma/",
+    "build:prisma": "shx mkdir -p dist/prisma && shx cp -r prisma/generated-client dist/prisma/",
     "package": "npm run build && electron-builder",
     "package:win": "npm run build && electron-builder --win",
     "package:linux": "npm run build && electron-builder --linux",
@@ -61,6 +60,7 @@
     "@typescript-eslint/parser": "^6.15.0",
     "@vitejs/plugin-react": "^4.2.1",
     "concurrently": "^8.2.2",
+    "cross-env": "^10.1.0",
     "electron": "^39.2.7",
     "electron-builder": "^24.9.1",
     "eslint": "^8.56.0",
@@ -68,6 +68,7 @@
     "pkg": "^5.8.1",
     "prisma": "^5.7.1",
     "sharp": "^0.34.5",
+    "shx": "^0.4.0",
     "ts-jest": "^29.1.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.3.3",
@@ -82,14 +83,11 @@
     "files": [
       "dist/**/*",
       "node_modules/**/*",
-      "package.json",
-      "dist/**/*",
-      "node_modules/**/*",
       "package.json"
     ],
     "extraResources": [
       {
-        "from": "prisma/inventory.db",
+        "from": "prisma/inventory.template.db",
         "to": "inventory.db"
       },
       {
